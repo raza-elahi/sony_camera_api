@@ -560,6 +560,10 @@ class SonyAPI():
         return self._cmd(
             method="setViewAngle", param=param, version=version)
 
+    def setViewAngleMode(self, param=None, version='1.0'):
+        return self._cmd(
+            method="setViewAngleMode", param=param, version=version)
+
     def setSceneSelection(self, param=None, version='1.0'):
         return self._cmd(
             method="setSceneSelection", param=param, version=version)
@@ -947,6 +951,15 @@ class SonyAPI():
 
     def getAvailableViewAngle(self, version='1.0'):
         return self._cmd(method="getAvailableViewAngle", version=version)
+
+    def getViewAngleMode(self, version='1.0'):
+        return self._cmd(method="getViewAngleMode", version=version)
+
+    def getSupportedViewAngleMode(self, version='1.0'):
+        return self._cmd(method="getSupportedViewAngleMode", version=version)
+
+    def getAvailableViewAngleMode(self, version='1.0'):
+        return self._cmd(method="getAvailableViewAngleMode", version=version)
 
     def getSceneSelection(self, version='1.0'):
         return self._cmd(method="getSceneSelection", version=version)
