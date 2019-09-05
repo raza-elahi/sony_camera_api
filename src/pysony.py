@@ -322,6 +322,7 @@ class SonyAPI():
             self.lv_url = url
             self._lilo_head_pool = LifoQueue()
             self._lilo_jpeg_pool = LifoQueue()
+            self.print_lock = threading.Lock()
 
             self.header = None
             self.frameinfo = []
@@ -330,6 +331,7 @@ class SonyAPI():
             sess = urlopen(self.lv_url)
 
             while True:
+                self.s_print("thread running")
                 header = sess.read(8)
                 ch = common_header(header)
 
@@ -359,6 +361,10 @@ class SonyAPI():
                 except Exception as e:
                     self.header = None
             return self.header
+
+        def s_print(self, *a, **b):
+            with self.print_lock:
+                print(*a, **b)
 
         def get_latest_view(self):
             # note this is a blocking call
