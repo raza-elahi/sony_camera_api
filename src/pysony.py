@@ -326,10 +326,17 @@ class SonyAPI():
             self.header = None
             self.frameinfo = []
 
+            self._streaming_lock = threading.Lock()
+            self._streaming = True
+
         def run(self):
             sess = urlopen(self.lv_url)
 
             while True:
+
+                if not self._streaming:
+                    break
+
                 header = sess.read(8)
                 ch = common_header(header)
 
@@ -351,6 +358,7 @@ class SonyAPI():
                         self.frameinfo.append(payload_frameinfo(data_img))
 
                 sess.read(payload['padding_size'])
+        
 
         def get_header(self):
             if not self.header:
@@ -374,6 +382,11 @@ class SonyAPI():
 
         def get_frameinfo(self):
             return self.frameinfo
+
+        def set_streaming(self, state):
+            with self._streaming_lock:
+                self._streaming = state
+
 
     def liveview(self, param=None, version='1.0'):
         if param:
