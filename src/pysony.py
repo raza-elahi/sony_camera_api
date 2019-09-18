@@ -10,6 +10,7 @@ from struct import unpack, unpack_from
 from xml.etree import ElementTree
 import logging
 import sys
+import time
 
 if sys.version_info < (3, 0):
     from Queue import LifoQueue
@@ -330,35 +331,42 @@ class SonyAPI():
             self._streaming = True
 
         def run(self):
-            sess = urlopen(self.lv_url)
+            try:
+                self._process_frame()
+            except Exception:
+                time.sleep(2)
+                self._process_frame()
 
-            while True:
+        def _process_frame(self):
+            try:
+                sess = urlopen(self.lv_url)
+                while True:
+                    if not self._streaming:
+                        break
 
-                if not self._streaming:
-                    break
+                    header = sess.read(8)
+                    ch = common_header(header)
 
-                header = sess.read(8)
-                ch = common_header(header)
+                    data = sess.read(128)
+                    payload = payload_header(data, payload_type=ch['payload_type'])
 
-                data = sess.read(128)
-                payload = payload_header(data, payload_type=ch['payload_type'])
+                    if ch['payload_type'] == 1:
+                        data_img = sess.read(payload['jpeg_data_size'])
+                        assert len(data_img) == payload['jpeg_data_size']
 
-                if ch['payload_type'] == 1:
-                    data_img = sess.read(payload['jpeg_data_size'])
-                    assert len(data_img) == payload['jpeg_data_size']
+                        self._lilo_head_pool.put(header)
+                        self._lilo_jpeg_pool.put(data_img)
 
-                    self._lilo_head_pool.put(header)
-                    self._lilo_jpeg_pool.put(data_img)
+                    elif ch['payload_type'] == 2:
+                        self.frameinfo = []
 
-                elif ch['payload_type'] == 2:
-                    self.frameinfo = []
+                        for x in range(payload['frame_count']):
+                            data_img = sess.read(payload['frame_size'])
+                            self.frameinfo.append(payload_frameinfo(data_img))
 
-                    for x in range(payload['frame_count']):
-                        data_img = sess.read(payload['frame_size'])
-                        self.frameinfo.append(payload_frameinfo(data_img))
-
-                sess.read(payload['padding_size'])
-        
+                    sess.read(payload['padding_size'])
+            except Exception:
+                raise
 
         def get_header(self):
             if not self.header:
