@@ -19,6 +19,8 @@ else:
     from queue import LifoQueue
     from urllib.request import urlopen
 
+import urllib.error
+
 SSDP_ADDR = "239.255.255.250"  # The remote host
 SSDP_PORT = 1900    # The same port as used by the server
 SSDP_ST = "urn:schemas-sony-com:service:ScalarWebAPI:1"
@@ -317,7 +319,7 @@ class SonyAPI():
 
     # Reading from the streaming data is a part of sony apis
     class LiveviewStreamThread(threading.Thread):
-        def __init__(self, url):
+        def __init__(self, url, callback):
             # Direct class call `threading.Thread` instead of `super()` for python2 capability
             threading.Thread.__init__(self)
             self.lv_url = url
@@ -330,6 +332,8 @@ class SonyAPI():
             self._streaming_lock = threading.Lock()
             self._streaming = True
 
+            self.callback = callback
+
         def run(self):
             try:
                 self._process_frame()
@@ -339,7 +343,16 @@ class SonyAPI():
 
         def _process_frame(self):
             try:
-                sess = urlopen(self.lv_url)
+                try:
+                    sess = urlopen(self.lv_url)
+                except urllib.error.HTTPError as error:
+                    print('Error = [{}], message = [{}]'.format(error.code, error.msg))
+                    if error.code == 503:
+                        self.set_streaming(False)
+                        self.callback()
+                        return
+                    print('this error is not handled')
+
                 while True:
                     if not self._streaming:
                         break
